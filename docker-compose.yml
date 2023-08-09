@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   oncall-web:
@@ -6,6 +6,7 @@ services:
     hostname: oncall
     ports:
       - "8080:8080"
+      - "8081:8081"
     environment:
       - DOCKER_DB_BOOTSTRAP=1
       - IRIS_API_HOST=iris
@@ -13,7 +14,7 @@ services:
       - ./configs/config.docker.yaml:/home/oncall/config/config.yaml
     networks:
       - iris
-  
+
   oncall-mysql:
     hostname: oncall-mysql
     image: mysql:5.7
@@ -22,6 +23,142 @@ services:
     networks:
       - iris
 
+  prometheus:
+    image: prom/prometheus
+    hostname: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules/alerts.rules.yml:/etc/prometheus/rules/alerts.rules.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - iris
+
+  blackbox:
+    image: prom/blackbox-exporter
+    ports:
+      - "9115:9115"
+    command:
+      - "--config.file=/etc/blackbox/blackbox.yml"
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox/blackbox.yml
+    networks:
+      - iris
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - '9100:9100'
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+    networks:
+      - iris
+
+  duty-exporter:
+    image: duty-exporter
+    container_name: duty-exporter
+    hostname: duty-exporter
+    ports:
+      - '8090:8090'
+    restart: unless-stopped
+    expose:
+      - 8090
+    networks:
+      - iris
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    networks:
+      - iris
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    environment:
+      - TELEGRAM_BOT_TOKEN=5842289888:AAH0QCW5H-jC_0vNPreeg6ApUuLFpUIe5qw
+      - TELEGRAM_CHAT_ID=753253858
+    ports:
+      - 9093:9093
+    networks:
+      - iris
+
+  filebeat:
+    user: root
+    container_name: filebeat
+    image: elastic/filebeat:7.17.12
+    labels:
+      co.elastic.logs/enabled: "false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker:/var/lib/docker
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+    command: [ "--strict.perms=false" ]
+    networks:
+      - iris
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
+  logstash:
+    container_name: logstash
+    image: elastic/logstash:7.17.12
+    labels:
+      co.elastic.logs/enabled: "false"
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - 5044:5044
+    networks:
+      - iris
+
+  kibana:
+    container_name: kibana
+    image: elastic/kibana:7.17.12
+    labels:
+      co.elastic.logs/enabled: "false"
+    environment:
+      - KBN_PATH_CONF=/etc/kibana
+    ports:
+      - 5601:5601
+    volumes:
+      - ./kibana.yml:/etc/kibana/kibana.yml
+    networks:
+      - iris
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: elastic/elasticsearch:7.17.12
+    labels:
+      co.elastic.logs/enabled: "false"
+    environment:
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks:
+      - iris
+
 networks:
   iris:
     name: iris
+

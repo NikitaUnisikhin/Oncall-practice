@@ -1,0 +1,43 @@
+{
+  "template": "logstash.template",
+  "index_patterns": [
+    "logstash-*"
+  ],
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "source": {
+        "type": "keyword"
+      },
+      "address": {
+        "type": "ip"
+      },
+      "host": {
+        "type": "keyword"
+      },
+      "method": {
+        "type": "keyword"
+      },
+      "uri": {
+        "type": "keyword"
+      },
+      "protocol": {
+        "type": "keyword"
+      },
+      "resp_size": {
+        "type": "integer"
+      },
+      "req_body_size": {
+        "type": "integer"
+      },
+      "resp_status": {
+        "type": "integer"
+      },
+      "resp_time": {
+        "type": "float"
+      }
+    }
+  }
+}

@@ -21,17 +21,23 @@ prod:
     memory-report: true
 
     # Logging
-    logformat: '%(ltime) [%(status)] %(method) %(uri) %(addr) [%(uagent)] RT:%(msecs) REF:%(referer) SZ:%(size) %(proto)'
-    log-4xx: true
-    log-5xx: true
-    log-x-forwarded-for: true
-    log-slow: 1500
+    logger: default stdio
+    logger: applogger stdio
+    log-route: 'applogger {'
+    log-route: 'default ^((?!\{).)*$'
+    log-encoder: 'json:default {"time":"${micros}", "source":"uwsgi", "message":"${msg}"}'
+    log-encoder: 'format:applogger ${msg}'
+    log-encoder: nl
+    logger-req: stdio
+    log-format: '"address":"%(addr)", "host":"%(host)", "method":"%(method)", "uri":"%(uri)", "protocol":"%(proto)", "resp_size":%(size), "req_body_size":%(cl), "resp_status":%(status), "resp_time":%(secs)'
+    log-req-encoder: 'format {"time":"${micros}", "source":"uwsgi-req", ${msg}}'
+    log-req-encoder: 'nl'
 
-    # access log
-    req-logger: file:/home/oncall/var/log/uwsgi/access.log
-
-    # error log
-    logger: file:/home/oncall/var/log/uwsgi/error.log
+#    # access log
+#    req-logger: file:/home/oncall/var/log/uwsgi/access.log
+#
+#    # error log
+#    logger: file:/home/oncall/var/log/uwsgi/error.log
 
     # put timestamp in the error log
     logdate: true

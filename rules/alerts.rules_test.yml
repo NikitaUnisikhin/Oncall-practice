@@ -1,0 +1,36 @@
+groups:
+- name: critical_alerts
+  rules:
+  - alert: OncallDown
+    expr: probe_success{instance="oncall-web:8080"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      description: "Oncall Web is down for more than 1 minute."
+
+  - alert: NoDutyPrimary
+    expr: duty{role="primary"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      description: "No duty primary in team."
+
+- name: warning_alerts
+  rules:
+  - alert: DiskSpaceUsed
+    expr: (100.0 - 100 * (node_filesystem_avail{job="node-exporter"} / node_filesystem_size{job="node-exporter"})) >= 80
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      description: "Disk space used 80%"
+
+  - alert: NoDutyWeekSecondary
+    expr: duty{role="primary"} == 0 or duty{role="secondary"} == 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      description: "Duty Week is not primary or secondary in team."
